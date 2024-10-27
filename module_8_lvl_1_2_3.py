@@ -7,11 +7,20 @@ students = [(1, 'Max', 'Brooks', 24, 'Spb'), (2, 'John', 'Stones', 15, 'Spb'),
 (3, 'Andy', 'Wings', 45, 'Manchester'), (4, 'Kate', 'Brooks', 34, 'Spb')]
 students_courses = [(1, 1), (2, 1), (3, 1), (4, 2)]
 
-class DataBase():
+class Singleton(type):
+    _instances = {}
+    def __call__(cls, *args, **kwargs):
+        if cls not in cls._instances:
+            cls._instances[cls] = super(Singleton, cls).__call__(*args, **kwargs)
+        return cls._instances[cls]
 
+
+class DataBase(metaclass = Singleton):
+    conn = None
     def __init__(self):
-        self.conn = sqlite3.connect('db.sqlite')
-        self.cursor = self.conn.cursor()
+        if self.conn is None:
+            self.conn = sqlite3.connect('db.sqlite')
+            self.cursor = self.conn.cursor()
         self.cursor.execute('CREATE TABLE IF NOT EXISTS Students (id INTEGER PRIMARY KEY AUTOINCREMENT, name VARCHAR(32), '
                        'surname VARCHAR(32), age INTEGER, city VARCHAR(32))')
         self.cursor.execute('CREATE TABLE IF NOT EXISTS Courses (id INTEGER PRIMARY KEY AUTOINCREMENT, name VARCHAR(32),'
