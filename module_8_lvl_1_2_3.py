@@ -35,13 +35,27 @@ class DataBase():
         print('Данные о студентах записаны')
         self.conn.commit()
 
-    def select_students_age(self, *args):
-        self.cursor.execute('SELECT * FROM Students WHERE age > ?', args)
+    def select_students_age(self, age = None):
+        self.cursor.execute('SELECT * FROM Students WHERE age > ?', (age,))
+        print("Произведен поиск по возрасту")
         return self.cursor.fetchall()
 
-    def select_students_from_courses(self, *args):
-        self.cursor.execute('SELECT * FROM Student_courses WHERE courses_id = 1')
-        rows = self.cursor.fetchall()
+    def select_students_from_courses(self, courses_id):
+        self.cursor.execute('SELECT * FROM Student_courses WHERE courses_id = ?', (courses_id,))
+        res = []
+        for ids in self.cursor.fetchall():
+            self.cursor.execute('SELECT * FROM Students WHERE id = ?', (ids[0],))
+            res += self.cursor.fetchall()
+        print("Произведен поиск по курсу")
+        return res
+
+    def select_python_city(self, city, courses_id):
+        res = []
+        for student in self.select_students_from_courses(courses_id):
+            if student[4] == city:
+                res += student
+        print("Произведен поиск по курсу и городу")
+        return res
 
     def __del__(self):
         self.conn.close()
@@ -49,4 +63,8 @@ class DataBase():
 
 data = DataBase()
 data.insert_students(students)
-print(data.select_students_age(40))
+data.insert_course(courses)
+data.insert_students_courses(students_courses)
+print(data.select_students_age(30))
+print(data.select_students_from_courses(1))
+print(data.select_python_city('Spb', 1))
