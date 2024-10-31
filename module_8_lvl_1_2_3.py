@@ -14,66 +14,69 @@ class Singleton(type):
             cls._instances[cls] = super(Singleton, cls).__call__(*args, **kwargs)
         return cls._instances[cls]
 
-
-class DataBase(metaclass = Singleton):
+class Database(metaclass = Singleton):
     conn = None
-    def __init__(self):
-        if self.conn is None:
-            self.conn = sqlite3.connect('db.sqlite')
+    def connect(self, db_name = None):
+        if self.conn == None:
+            self.conn = sqlite3.connect(db_name)
             self.cursor = self.conn.cursor()
-        self.cursor.execute('CREATE TABLE IF NOT EXISTS Students (id INTEGER PRIMARY KEY AUTOINCREMENT, name VARCHAR(32), '
-                       'surname VARCHAR(32), age INTEGER, city VARCHAR(32))')
-        self.cursor.execute('CREATE TABLE IF NOT EXISTS Courses (id INTEGER PRIMARY KEY AUTOINCREMENT, name VARCHAR(32),'
-                       ' time_start DATE, time_end DATE)')
-        self.cursor.execute('CREATE TABLE IF NOT EXISTS Student_courses (student_id INTEGER,'
-                       ' courses_id INTEGER, UNIQUE(student_id, courses_id))')
-        print('База данных создана')
+        return self.cursor
 
-    def insert_students_courses(self, students_courses):
-        self.cursor.executemany('INSERT OR IGNORE INTO Student_courses VALUES (?, ?)', students_courses)
-        print('Данные о курсах, которые проходят студенты записаны')
+    def execute(self, query, params=()):
+        self.cursor.execute(query, params)
         self.conn.commit()
+        return self.cursor
 
-    def insert_course(self, courses):
-        self.cursor.executemany('INSERT OR IGNORE INTO Courses VALUES (?, ?, ?, ?)', courses)
-        print('Данные о курсах записаны')
-        self.conn.commit()
-
-    def insert_students(self, students):
-        self.cursor.executemany('INSERT OR IGNORE INTO Students VALUES (?, ?, ?, ?, ?)', students)
-        print('Данные о студентах записаны')
-        self.conn.commit()
-
-    def select_students_age(self, age = None):
-        self.cursor.execute('SELECT * FROM Students WHERE age > ?', (age,))
-        print("Произведен поиск по возрасту")
-        return self.cursor.fetchall()
-
-    def select_students_from_courses(self, courses_id):
-        self.cursor.execute('SELECT * FROM Student_courses WHERE courses_id = ?', (courses_id,))
-        res = []
-        for ids in self.cursor.fetchall():
-            self.cursor.execute('SELECT * FROM Students WHERE id = ?', (ids[0],))
-            res += self.cursor.fetchall()
-        print("Произведен поиск по курсу")
-        return res
-
-    def select_python_city(self, city, courses_id):
-        res = []
-        for student in self.select_students_from_courses(courses_id):
-            if student[4] == city:
-                res += student
-        print("Произведен поиск по курсу и городу")
-        return res
-
-    def __del__(self):
+    def close(self):
         self.conn.close()
-        print('Подключение закрыто')
 
-data = DataBase()
-data.insert_students(students)
-data.insert_course(courses)
-data.insert_students_courses(students_courses)
-print(data.select_students_age(30))
-print(data.select_students_from_courses(1))
-print(data.select_python_city('Spb', 1))
+class TableModel():
+    _fields = None
+
+    def __init__(self, **kwargs):
+        self._data = kwargs
+
+    @classmethod
+    def table_name(cls):
+        return cls.__name__.lower()
+
+    def create_table(cls):
+        atr = ", ".join([f"{name} {ftype}" for name, ftype in cls._fields.items()])
+        query = f"CREATE TABLE IF NOT EXISTS {cls.table_name()} ({atr});"
+        cls._db.execute(query)
+
+    def set_db(cls, db):
+        cls._db = db
+
+    def save(self):
+        keys = ", ".join(self._data.keys())
+        values = ", ".join(["?"] * len(self._data))
+        query = f"INSERT INTO {self.table_name()} ({keys}) VALUES ({values})"
+        self._db.execute(query, tuple(self._data.values()))
+
+    def select_all(cls):
+        query = f"SELECT * FROM {cls.table_name()}"
+        rows = cls._db.execute(query).fetchall()
+        return [cls(**dict(zip(cls._fields.keys(), row))) for row in rows]
+
+
+class StudentsDataBase(TableModel):
+    _fields = {
+        'id': 'INTEGER PRIMARY KEY AUTOINCREMENT',
+        'name': 'VARCHAR(32)',
+        'surname': 'VARCHAR(32)',
+        'age': 'INTEGER',
+        'city': 'VARCHAR(32)'}
+
+    def __init__(self, id = None, name = None, surname = None, age = None, city = None):
+        super().__init__(id = id, name = name, surname = surname, age = age, city = city)
+
+
+db = Database()
+student1 = StudentsDataBase(1, 'Max', 'Brooks', 24, 'Spb')
+student1.select_all()
+
+
+
+
+
