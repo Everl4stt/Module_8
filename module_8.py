@@ -1,7 +1,6 @@
 import sqlite3
 from datetime import datetime, date
 
-from module_8_lvl_1_2_3 import StudentsDataBase
 
 courses = [(1, 'python', str(date(2021, 7, 21)), str(date(2021, 8, 21))),
 (2, 'java', str(date(2021, 7, 13)), str(date(2021, 8, 16)))]
@@ -14,17 +13,15 @@ class DataBase():
 
     def __init__(self, db_name):
         self.db_name = db_name
-
-    def connect(self):
         if self.connection == None:
             self.connection = sqlite3.connect(self.db_name)
             self.cursor = self.connection.cursor()
         print(f'Соединение с базой данных {self.db_name} установленно')
-        return self.cursor
 
-    def execute(self, query, param = None):
-        self.cursor.execute(query)
+    def execute(self, query, param = ()):
+        self.cursor.execute(query, param)
         self.connection.commit()
+        print(f'Данные в базе {self.db_name} были обновлены ')
         return self.cursor
 
     def close(self):
@@ -43,28 +40,30 @@ class DataBaseModels():
 
     @classmethod
     def set_db(cls, db):
-        cls.db = DataBase(db)
+        cls.database = DataBase(db)
 
     @classmethod
     def create_table(cls):
         attributes = ', '.join([f'{name} {atrtype}' for name, atrtype in cls.params.items()])
-        query = f'CREATE TABLE IF NOT EXIST {cls.db_name} ({attributes})'
-        cls.db.execute(query = query)
+        query = f'CREATE TABLE IF NOT EXISTS {cls.db_name()} ({attributes});'
+        cls.database.execute(query)
 
     def save_data(self):
-        keys = ', '.join(self.data.keys())
-        values = ' '.join(['?'] * len(self.data))
-        query = f'INSERT OR IGNORE INTO {self.db_name} ({keys}) VALUES ({values})'
-        self.db.execute(query, tuple(self.data.values()))
+        keys = ', '.join(self.params.keys())
+        values = ', '.join(['?'] * len(self.data))
+        query = f'INSERT OR IGNORE INTO {self.db_name()} ({keys}) VALUES ({values});'
+        self.database.execute(query, tuple(self.data))
 
     @classmethod
     def show_data(cls):
-        query = f'SELECT * FROM {cls.db_name()}'
-        return cls.db.execute(query).fetchall()
+        query = f'SELECT * FROM {cls.db_name()};'
+        return cls.database.execute(query).fetchall()
 
     @classmethod
-    def insert(cls):
-        pass
+    def insert(cls, *args):
+        manyconditions = ''.join(args, ' AND ')
+        query = f'SELECT * FROM {cls.db_name()} WHERE {manyconditions};'
+        return cls.database.execute(query).fetchall()
 
 class Students(DataBaseModels):
     params = {
@@ -75,15 +74,15 @@ class Students(DataBaseModels):
         'city' : 'VARCHAR(32)'
     }
 
-    #def __init__(self, id = None, name = None, surname = None, age = None, city = None):
 
 
-
-mydb = DataBase('mydb.sqlite')
-mydb.connect()
-StudentsDataBase.set_db('mydb.sqlite')
-student1 = Students(1, 'Max', 'Brooks', 24, 'Spb')
-Students.create_table()
-Students.show_data()
-student1.save_data()
-Students.show_data()
+if __name__ == '__main__':
+    mydb = DataBase('mydb.sqlite')
+    Students.set_db('mydb.sqlite')
+    print(Students.show_data())
+    student1 = Students(2, 'John', 'Stones', 15, 'Spb')
+    Students.create_table()
+    student1.save_data()
+    print(Students.show_data())
+    print(student1.insert('age > 10', 'city == Spb'))
+    mydb.close()
