@@ -60,10 +60,21 @@ class DataBaseModels():
         return cls.database.execute(query).fetchall()
 
     @classmethod
-    def insert(cls, *args):
-        manyconditions = ''.join(args, ' AND ')
-        query = f'SELECT * FROM {cls.db_name()} WHERE {manyconditions};'
-        return cls.database.execute(query).fetchall()
+    def insert(cls, **filters):
+        print('Результаты поиска:')
+        conditions = []
+        values = []
+        for field, condition in filters.items():
+            if isinstance(condition, tuple):
+                operation, value = condition
+                conditions.append(f'{field} {operation} ?')
+                values.append(value)
+            else:
+                conditions.append(f'{field} = ?')
+                values.append(condition)
+            manyconditions = ' AND '.join(conditions) if conditions else '1'
+            query = f'SELECT * FROM {cls.db_name()} WHERE {manyconditions};'
+            return cls.database.execute(query, tuple(values)).fetchall()
 
 class Students(DataBaseModels):
     params = {
@@ -84,5 +95,5 @@ if __name__ == '__main__':
     Students.create_table()
     student1.save_data()
     print(Students.show_data())
-    print(student1.insert('age > 10', 'city == Spb'))
+    print(student1.insert(age = ('>', 10), city = ''))
     mydb.close()
