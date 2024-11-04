@@ -1,7 +1,14 @@
 import sqlite3
 from datetime import date
 
-class DataBase():
+class Singleton(type):
+     _instances = {}
+     def __call__(cls, *args, **kwargs):
+         if cls not in cls._instances:
+            cls._instances[cls] = super(Singleton, cls).__call__(*args, **kwargs)
+         return cls._instances[cls]
+
+class DataBase(metaclass = Singleton):
     connection = None
 
     def __init__(self, db_name):
@@ -9,7 +16,6 @@ class DataBase():
         if self.connection == None:
             self.connection = sqlite3.connect(self.db_name)
             self.cursor = self.connection.cursor()
-        print(f'Соединение с базой данных {self.db_name} установленно')
 
     def execute(self, query, param = ()):
         self.cursor.execute(query, param)
@@ -18,7 +24,6 @@ class DataBase():
 
     def close(self):
         self.connection.close()
-        print(f'Соединение с базой данных {self.db_name} закрыто')
 
 class DataBaseModels():
     params = {}
@@ -49,12 +54,10 @@ class DataBaseModels():
     @classmethod
     def show_data(cls):
         query = f'SELECT * FROM {cls.db_name()};'
-        print(f'Данные из базы {cls.db_name()}: ', end = '')
-        return cls.database.execute(query).fetchall()
+        return f'Данные из базы {cls.db_name()}: {cls.database.execute(query).fetchall()}'
 
     @classmethod
     def insert(cls, **filters):
-        print('Результаты поиска:')
         conditions = []
         values = []
         for field, condition in filters.items():
@@ -108,7 +111,7 @@ if __name__ == '__main__':
     student4 = Students(4, 'Kate', 'Brooks', 34, 'Spb')
     student4.save_data()
     print(Students.show_data())
-    print(Students.insert(age = ('>', 20), city = 'Spb'))
+    print(f'Результаты поиска : {Students.insert(age = ('>', 20), city = 'Spb')}')
     Courses.set_db('mydb.sqlite')
     Courses.create_table()
     courses1 = Courses(1, 'python', str(date(2021, 7, 21)), str(date(2021, 8, 21)))
@@ -128,5 +131,5 @@ if __name__ == '__main__':
     sc4.save_data()
     print(StudentsCourses.show_data())
     for results in StudentsCourses.insert(id_courses = 1):
-        print(Students.insert(id = list(results)[1], city = 'Spb'))
+        print(f'Результаты поиска : {Students.insert(id = list(results)[1], city = 'Spb')}')
     mydb.close()
