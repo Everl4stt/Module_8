@@ -1,12 +1,5 @@
 import sqlite3
-from datetime import datetime, date
-
-
-courses = [(1, 'python', str(date(2021, 7, 21)), str(date(2021, 8, 21))),
-(2, 'java', str(date(2021, 7, 13)), str(date(2021, 8, 16)))]
-students = [(1, 'Max', 'Brooks', 24, 'Spb'), (2, 'John', 'Stones', 15, 'Spb'),
-(3, 'Andy', 'Wings', 45, 'Manchester'), (4, 'Kate', 'Brooks', 34, 'Spb')]
-students_courses = [(1, 1), (2, 1), (3, 1), (4, 2)]
+from datetime import date
 
 class DataBase():
     connection = None
@@ -21,7 +14,6 @@ class DataBase():
     def execute(self, query, param = ()):
         self.cursor.execute(query, param)
         self.connection.commit()
-        print(f'Данные в базе {self.db_name} были обновлены ')
         return self.cursor
 
     def close(self):
@@ -57,6 +49,7 @@ class DataBaseModels():
     @classmethod
     def show_data(cls):
         query = f'SELECT * FROM {cls.db_name()};'
+        print(f'Данные из базы {cls.db_name()}: ', end = '')
         return cls.database.execute(query).fetchall()
 
     @classmethod
@@ -72,9 +65,9 @@ class DataBaseModels():
             else:
                 conditions.append(f'{field} = ?')
                 values.append(condition)
-            manyconditions = ' AND '.join(conditions) if conditions else '1'
-            query = f'SELECT * FROM {cls.db_name()} WHERE {manyconditions};'
-            return cls.database.execute(query, tuple(values)).fetchall()
+        manyconditions = ' AND '.join(conditions)
+        query = f'SELECT * FROM {cls.db_name()} WHERE {manyconditions};'
+        return cls.database.execute(query, tuple(values)).fetchall()
 
 class Students(DataBaseModels):
     params = {
@@ -85,15 +78,60 @@ class Students(DataBaseModels):
         'city' : 'VARCHAR(32)'
     }
 
+class Courses(DataBaseModels):
+    params = {
+        'id' : 'INTEGER PRIMARY KEY',
+        'name' : 'VARCHAR(32)',
+        'time_start': 'DATE',
+        'time_end' : 'DATE',
+    }
+
+class StudentsCourses(DataBaseModels):
+    params = {
+        'id' : 'INTEGER PRIMARY KEY',
+        'id_students' : 'INTEGER REFERENCES students(id)',
+        'id_courses': 'INTEGER REFERENCES courses(id)',
+    }
+
 
 
 if __name__ == '__main__':
+    courses = [(1, 'python', str(date(2021, 7, 21)), str(date(2021, 8, 21))),
+               (2, 'java', str(date(2021, 7, 13)), str(date(2021, 8, 16)))]
+    students_base = [(1, 'Max', 'Brooks', 24, 'Spb'), (2, 'John', 'Stones', 15, 'Spb'),
+                     (3, 'Andy', 'Wings', 45, 'Manchester'), (4, 'Kate', 'Brooks', 34, 'Spb')]
+    students_courses = [(1, 1), (2, 1), (3, 1), (4, 2)]
     mydb = DataBase('mydb.sqlite')
     Students.set_db('mydb.sqlite')
-    print(Students.show_data())
-    student1 = Students(2, 'John', 'Stones', 15, 'Spb')
     Students.create_table()
+    student1 = Students(1, 'Max', 'Brooks', 24, 'Spb')
     student1.save_data()
+    student2 = Students(2, 'John', 'Stones', 15, 'Spb')
+    student2.save_data()
+    student3 = Students(3, 'Andy', 'Wings', 45, 'Manchester')
+    student3.save_data()
+    student4 = Students(4, 'Kate', 'Brooks', 34, 'Spb')
+    student4.save_data()
     print(Students.show_data())
-    print(student1.insert(age = ('>', 10), city = ''))
+    print(Students.insert(age = ('>', 20), city = 'Spb'))
+    Courses.set_db('mydb.sqlite')
+    Courses.create_table()
+    courses1 = Courses(1, 'python', str(date(2021, 7, 21)), str(date(2021, 8, 21)))
+    courses1.save_data()
+    courses2 = Courses(2, 'java', str(date(2021, 7, 13)), str(date(2021, 8, 16)))
+    courses2.save_data()
+    print(Courses.show_data())
+    StudentsCourses.set_db('mydb.sqlite')
+    StudentsCourses.create_table()
+    sc1 = StudentsCourses(1, 1, 1)
+    sc1.save_data()
+    sc2 = StudentsCourses(2, 2, 1)
+    sc2.save_data()
+    sc3 = StudentsCourses(3, 3, 1)
+    sc3.save_data()
+    sc4 = StudentsCourses(4, 4, 2)
+    sc4.save_data()
+    print(StudentsCourses.show_data())
+    for results in StudentsCourses.insert(id_courses = 1):
+        print(Students.insert(id = list(results)[1], city = 'Spb'))
     mydb.close()
