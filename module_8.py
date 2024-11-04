@@ -96,11 +96,6 @@ class StudentsCourses(DataBaseModels):
 
 
 if __name__ == '__main__':
-    courses = [(1, 'python', str(date(2021, 7, 21)), str(date(2021, 8, 21))),
-               (2, 'java', str(date(2021, 7, 13)), str(date(2021, 8, 16)))]
-    students_base = [(1, 'Max', 'Brooks', 24, 'Spb'), (2, 'John', 'Stones', 15, 'Spb'),
-                     (3, 'Andy', 'Wings', 45, 'Manchester'), (4, 'Kate', 'Brooks', 34, 'Spb')]
-    students_courses = [(1, 1), (2, 1), (3, 1), (4, 2)]
     mydb = DataBase('mydb.sqlite')
     Students.set_db('mydb.sqlite')
     Students.create_table()
